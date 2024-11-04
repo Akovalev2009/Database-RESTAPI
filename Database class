@@ -1,24 +1,63 @@
 import os
 import psycopg2
+import json
 
 class Database:
     def __init__(self):
-        self.connection = psycopg2.connect(
-            host=os.getenv('FSTR_DB_HOST'),
-            port=os.getenv('FSTR_DB_PORT'),
-            user=os.getenv('FSTR_DB_LOGIN'),
-            password=os.getenv('FSTR_DB_PASS'),
-            dbname='your_database_name'
-        )
-        self.cursor = self.connection.cursor()
+        try:
+            self.connection = psycopg2.connect(
+                host=os.getenv('FSTR_DB_HOST'),
+                port=os.getenv('FSTR_DB_PORT'),
+                user=os.getenv('FSTR_DB_LOGIN'),
+                password=os.getenv('FSTR_DB_PASS'),
+                dbname='your_database_name'
+            )
+            self.cursor = self.connection.cursor()
+        except Exception as e:
+            print(f"Ошибка подключения к базе данных: {e}")
 
     def submit_pass(self, pass_data):
-        # Пример вставки данных о перевале
-        query = "INSERT INTO passes (name, location, status) VALUES (%s, %s, %s) RETURNING id;"
-        self.cursor.execute(query, (pass_data['name'], pass_data['location'], 'new'))
-        self.connection.commit()
-        return self.cursor.fetchone()[0]
+        try:
+            query = """
+                INSERT INTO passes (
+                    beauty_title, title, other_titles, connect, 
+                    add_time, user_email, user_fam, user_name, user_otc, user_phone,
+                    coords_latitude, coords_longitude, coords_height,
+                    level_winter, level_summer, level_autumn, level_spring,
+                    images, status
+                ) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+                        %s, %s, %s, %s, %s, %s, %s, 'new') 
+                RETURNING id;
+            """
+            values = (
+                pass_data.get('beauty_title'),
+                pass_data.get('title'),
+                pass_data.get('other_titles'),
+                pass_data.get('connect'),
+                pass_data.get('add_time'),
+                pass_data['user']['email'],
+                pass_data['user']['fam'],
+                pass_data['user']['name'],
+                pass_data['user']['otc'],
+                pass_data['user']['phone'],
+                pass_data['coords']['latitude'],
+                pass_data['coords']['longitude'],
+                pass_data['coords']['height'],
+                pass_data['level']['winter'],
+                pass_data['level']['summer'],
+                pass_data['level']['autumn'],
+                pass_data['level']['spring'],
+                json.dumps(pass_data['images'])  # Сохраняем изображения как JSON
+            )
+            self.cursor.execute(query, values)
+            self.connection.commit()
+            return self.cursor.fetchone()[0]  # Возвращаем id вставленной записи
+        except Exception as e:
+            print(f"Ошибка при добавлении данных: {e}")
+            return None
 
     def close(self):
         self.cursor.close()
         self.connection.close()
+
