@@ -1,0 +1,22 @@
+CREATE TABLE passes (
+    id SERIAL PRIMARY KEY,
+    beauty_title VARCHAR(255),
+    title VARCHAR(255) NOT NULL,
+    other_titles VARCHAR(255),
+    connect TEXT,
+    add_time TIMESTAMP NOT NULL,
+    user_email VARCHAR(255),
+    user_fam VARCHAR(255),
+    user_name VARCHAR(255),
+    user_otc VARCHAR(255),
+    user_phone VARCHAR(20),
+    coords_latitude DECIMAL(10, 8),
+    coords_longitude DECIMAL(11, 8),
+    coords_height INTEGER,
+    level_winter VARCHAR(50),
+    level_summer VARCHAR(50),
+    level_autumn VARCHAR(50),
+    level_spring VARCHAR(50),
+    status VARCHAR(20) NOT NULL DEFAULT 'new',
+    images JSONB
+);
