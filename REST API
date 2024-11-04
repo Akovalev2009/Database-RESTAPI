@@ -1,0 +1,13 @@
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+db = Database()
+
+@app.route('/submitData', methods=['POST'])
+def submit_data():
+    data = request.json
+    pass_id = db.submit_pass(data)
+    return jsonify({"id": pass_id}), 201
+
+if __name__ == '__main__':
+    app.run()
