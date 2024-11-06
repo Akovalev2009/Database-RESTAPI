@@ -1,0 +1,84 @@
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+# Класс для взаимодействия с базой данных (в данном случае, простой пример на основе словаря)
+class Database:
+    def __init__(self):
+        self.data = {}  # Простое хранилище данных в памяти
+
+    def submit_pass(self, data):
+        new_id = len(self.data) + 1
+        data['id'] = new_id
+        data['moderation_status'] = 'new'
+        self.data[new_id] = data
+        return new_id
+
+    def get_pass_by_id(self, id):
+        return self.data.get(id)
+
+    def update_pass(self, id, update_data):
+        if id not in self.data:
+            return False, "Запись не найдена."
+        if self.data[id]['moderation_status'] != 'new':
+            return False, "Запись не может быть изменена; статус не 'new'."
+        # Обновление полей, кроме 'full_name', 'email', 'phone_number'
+        for key, value in update_data.items():
+            if key not in ['full_name', 'email', 'phone_number']:
+                self.data[id][key] = value
+        return True, "Запись успешно обновлена."
+
+    def get_passes_by_user_email(self, email):
+        return [entry for entry in self.data.values() if entry.get('user_email') == email]
+
+db = Database()
+
+@app.route('/submitData', methods=['POST'])
+def submit_data():
+    data = request.json
+
+    # Проверка на наличие всех обязательных полей
+    required_fields = ['title', 'add_time', 'user', 'coords', 'level', 'images']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"status": 400, "message": f"Отсутствует поле: {field}", "id": None}), 400
+
+    # Вставка данных в базу данных
+    pass_id = db.submit_pass(data)
+    if pass_id is None:
+        return jsonify({"status": 500, "message": "Ошибка при выполнении операции", "id": None}), 500
+
+    return jsonify({"status": 200, "message": None, "id": pass_id}), 200
+
+# GET /submitData/<id> — Получить одну запись по её id
+@app.route('/submitData/<int:id>', methods=['GET'])
+def get_submit_data(id):
+    submission = db.get_pass_by_id(id)
+    if submission is None:
+        return jsonify({"message": "Запись не найдена"}), 404
+    return jsonify(submission), 200
+
+# PATCH /submitData/<id> — Обновить существующую запись, если её статус 'new'
+@app.route('/submitData/<int:id>', methods=['PATCH'])
+def patch_submit_data(id):
+    update_data = request.json
+    success, message = db.update_pass(id, update_data)
+    if success:
+        return jsonify({"state": 1, "message": message}), 200
+    else:
+        return jsonify({"state": 0, "message": message}), 400
+
+# GET /submitData/?user__email=<email> — Получить список всех записей по email пользователя
+@app.route('/submitData', methods=['GET'])
+def get_user_submissions():
+    email = request.args.get('user__email')
+    if not email:
+        return jsonify({"message": "Параметр email обязателен."}), 400
+
+    submissions = db.get_passes_by_user_email(email)
+    return jsonify(submissions), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
